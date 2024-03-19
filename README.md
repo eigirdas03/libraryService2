@@ -1,5 +1,5 @@
 # Library web service
-* Upgraded library web service `https://github.com/eigirdas03/libraryService` that uses plants shop service `https://github.com/KarolisRazma/plants_shop`
+* Upgraded library web service https://github.com/eigirdas03/libraryService that uses plants shop service https://github.com/KarolisRazma/plants_shop
 * Books about plants can now be linked with corresponding plants objects
 * Also, all plants are able to be viewed and a new plant can be added
 
