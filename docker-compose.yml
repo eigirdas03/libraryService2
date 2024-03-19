@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  library:
+    build: .
+    ports:
+      - "80:80"
+
+  plant:
+    build: ./plantService
+    ports:
+      - "5000:5000"
+    command: python ./plantService/app.py
+    volumes:
+      - .:/code
