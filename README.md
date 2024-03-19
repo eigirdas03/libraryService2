@@ -25,7 +25,7 @@
 * title
 * published (year)
 
-## New resources(from plants shop service)
+## New resources (from plants shop service)
 
 ### Plant (sellers field is ignored)
 * id (auto generated)
