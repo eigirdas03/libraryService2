@@ -37,18 +37,10 @@ public class BookPlantMapperController
 		return new ResponseEntity<>(HttpStatus.CREATED);
 	}
 	
-	@DeleteMapping("/books/{id}/plants")
-	public ResponseEntity<HttpStatus>unlinkPlantsFromBook(@PathVariable("id") long book) throws LibraryServiceException
-	{
-		bookPlantMapperService.unlinkPlantsFromBook(book);
-		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-	}
-	
 	@DeleteMapping("/books/{id}/plants/{plantId}")
 	public ResponseEntity<HttpStatus>unlinkPlantFromBook(@PathVariable("id") long book, @PathVariable("plantId") long plant) throws LibraryServiceException
 	{
 		bookPlantMapperService.unlinkPlantFromBook(book, plant);
 		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 	}
-	
 }

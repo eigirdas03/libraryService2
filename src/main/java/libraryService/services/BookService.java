@@ -10,7 +10,9 @@ import org.springframework.stereotype.Service;
 import libraryService.exceptions.LibraryServiceException;
 import libraryService.models.Book;
 import libraryService.models.BookLibraryMapper;
+import libraryService.models.BookPlantMapper;
 import libraryService.repositories.BookLibraryMapperRepository;
+import libraryService.repositories.BookPlantMapperRepository;
 import libraryService.repositories.BookRepository;
 
 @Service
@@ -18,11 +20,14 @@ public class BookService
 {
 	BookRepository bookRepository;
 	BookLibraryMapperRepository bookLibraryMapperRepository;
+	BookPlantMapperRepository bookPlantMapperRepository;
 	
-	public BookService(BookRepository bookRepository, BookLibraryMapperRepository bookLibraryMapperRepository) throws LibraryServiceException
+	public BookService(BookRepository bookRepository, BookLibraryMapperRepository bookLibraryMapperRepository, 
+			BookPlantMapperRepository bookPlantMapperRepository) throws LibraryServiceException
 	{
 		this.bookRepository = bookRepository;
 		this.bookLibraryMapperRepository = bookLibraryMapperRepository;
+		this.bookPlantMapperRepository = bookPlantMapperRepository;
 		
         bookRepository.save(new Book("name1 surname1", "title1", 2000));
         bookRepository.save(new Book("name2 surname2", "title2", 2001));
@@ -101,15 +106,27 @@ public class BookService
 		
 		bookRepository.deleteById(id);
 		
-		List<BookLibraryMapper> allMapperData = bookLibraryMapperRepository.findAll();
+		List<BookLibraryMapper> bookLibraryMapperData = bookLibraryMapperRepository.findAll();
 		
-		for(int i = 0; i < allMapperData.size(); ++i)
+		for(int i = 0; i < bookLibraryMapperData.size(); ++i)
 		{
-			BookLibraryMapper mapperData = allMapperData.get(i);
+			BookLibraryMapper mapperData = bookLibraryMapperData.get(i);
 			
 			if(mapperData.getBook() == id)
 			{
 				bookLibraryMapperRepository.delete(mapperData);
+			}
+		}
+		
+		List<BookPlantMapper> bookPlantMapperData = bookPlantMapperRepository.findAll();
+		
+		for(int i = 0; i < bookPlantMapperData.size(); ++i)
+		{
+			BookPlantMapper mapperData = bookPlantMapperData.get(i);
+			
+			if(mapperData.getBook() == id)
+			{
+				bookPlantMapperRepository.delete(mapperData);
 			}
 		}
 	}

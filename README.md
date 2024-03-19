@@ -1,9 +1,11 @@
 # Library web service
-Simple library web service that implements CRUD operations 
+* Upgraded library web service `https://github.com/eigirdas03/libraryService` that uses plants shop service `https://github.com/KarolisRazma/plants_shop`
+* Books about plants can now be linked with corresponding plants objects
+* Also, all plants are able to be viewed and a new plant can be added
 
 ## How to run
-1. `git clone https://github.com/eigirdas03/libraryService`
-2. `cd libraryService`
+1. `git clone https://github.com/eigirdas03/libraryService2`
+2. `cd libraryService2`
 3. `docker-compose up --build` or `docker-compose up --build -d` (detached mode)
 4. open browser and go to http://localhost:80/swagger
    
@@ -23,7 +25,14 @@ Simple library web service that implements CRUD operations
 * title
 * published (year)
 
-## Available commands
+## New resources (from plants shop service)
+
+### Plant (sellers field is ignored)
+* id (auto generated)
+* name
+* type
+
+## Commands
 
 ### GET
 * http://localhost:80/libraries - get all libraries
@@ -47,7 +56,26 @@ Simple library web service that implements CRUD operations
 * http://localhost:80/libraries/1/books/2 - remove book(id 2) from library(id 1)
 
 
-## POST/PUT body structure (id will be ignored)
+## New commands
+
+### GET
+
+* http://localhost:80/plants - get all plants
+* http://localhost:80/books/1/plants - get all plants linked to specific book
+
+
+### POST
+
+* http://localhost:80/plants - create a plant
+* http://localhost:80/books/1/plants/2 - link plant(id 2) to book(id 1)
+
+
+### DELETE
+
+* http://localhost:80/books/1/plants/2 - unlink plant(id 2) from book(id 1)
+
+
+## Library/Book POST/PUT body structure (id is ignored)
 
 ### Library
 ```json
@@ -67,3 +95,10 @@ Simple library web service that implements CRUD operations
 }
 ```
 
+## Plant POST body structure (id and sellers(will be set to empty list) fields are ignored)
+```json
+{
+    "name": "plant1",
+    "type": "type1"
+}
+```

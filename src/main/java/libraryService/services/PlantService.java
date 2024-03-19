@@ -1,6 +1,7 @@
 package libraryService.services;
 
 import java.net.ConnectException;
+import java.net.UnknownHostException;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -22,7 +23,7 @@ import libraryService.models.Plant;
 @Service
 public class PlantService
 {
-	final static String resourceUrl = "http://localhost:5000/plants";
+	final static String resourceUrl = "http://plant_service:5000/plants";
 	
 	public PlantService()
 	{
@@ -45,16 +46,21 @@ public class PlantService
 		}
 		catch(RestClientException e)
 		{
-			if(e.getCause() instanceof ConnectException)
+			if(e.getCause() instanceof ConnectException || e.getCause() instanceof UnknownHostException)
 			{
 				throw new LibraryServiceException("Plant service is down", HttpStatus.INTERNAL_SERVER_ERROR);
 			}
 		}
 		
+		if(response == null)
+		{
+			throw new LibraryServiceException("Plant service is down", HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+		
 		return response.getBody();
 	}
 	
-	public Plant getPlant(long id) throws LibraryServiceException
+	public Plant checkIfPlantExists(long id) throws LibraryServiceException
 	{
 		RestTemplate restTemplate = new RestTemplate();
 		
@@ -66,14 +72,19 @@ public class PlantService
 		}
 		catch(HttpClientErrorException.NotFound e)
 		{
-		    throw new LibraryServiceException("Plant with id " + id + " does not exist", HttpStatus.NOT_FOUND);
+		    return null;
 		}
 		catch(RestClientException e)
 		{
-			if(e.getCause() instanceof ConnectException)
+			if(e.getCause() instanceof ConnectException || e.getCause() instanceof UnknownHostException)
 			{
 				throw new LibraryServiceException("Plant service is down", HttpStatus.INTERNAL_SERVER_ERROR);
 			}
+		}
+		
+		if(response == null)
+		{
+			throw new LibraryServiceException("Plant service is down", HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 		
 		return response.getBody();
@@ -91,13 +102,13 @@ public class PlantService
 			JSONObject requestJson = new JSONObject(plant);
 			requestJson.put("sellers", new JSONArray());
 			
-		    HttpEntity<String> request =  new HttpEntity<String>(requestJson.toString(), headers);
+		    HttpEntity<String> request = new HttpEntity<String>(requestJson.toString(), headers);
 			
 			restTemplate.postForEntity(resourceUrl, request, String.class);
 		}
 		catch(RestClientException e)
 		{
-			if(e.getCause() instanceof ConnectException)
+			if(e.getCause() instanceof ConnectException || e.getCause() instanceof UnknownHostException)
 			{
 				throw new LibraryServiceException("Plant service is down", HttpStatus.INTERNAL_SERVER_ERROR);
 			}

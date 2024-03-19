@@ -54,9 +54,25 @@ public class BookPlantMapperService
 		
 		List<Plant> plants = new ArrayList<>();
 		
+		Plant plant;
+		
 		for(int i = 0; i < plantIds.size(); ++i)
 		{
-			plants.add(plantService.getPlant(plantIds.get(i)));
+			plant = plantService.checkIfPlantExists(plantIds.get(i));
+			
+			if(plant == null)
+			{
+				bookPlantMapperRepository.deleteById(new BookPlantMapperId(book, plantIds.get(i)));
+			}
+			else
+			{
+				plants.add(plant);
+			}
+		}
+		
+		if(plants.size() == 0)
+		{
+			throw new LibraryServiceException("This book does not have any plants linked to it", HttpStatus.NOT_FOUND);
 		}
 		
 		return plants;
@@ -65,13 +81,27 @@ public class BookPlantMapperService
 	public void linkPlantToBook(long book, long plant) throws LibraryServiceException
 	{
 		bookService.checkIfBookExists(book);
-		plantService.getPlant(plant);
+		
+		Plant plantObject = plantService.checkIfPlantExists(plant);
 		
 		Optional<BookPlantMapper> bookLinkedToPlant = bookPlantMapperRepository.findById(new BookPlantMapperId(book, plant));
 		
 		if(bookLinkedToPlant.isPresent())
 		{
-			throw new LibraryServiceException("Plant is already linked to this book", HttpStatus.BAD_REQUEST);
+			if(plantObject != null)
+			{
+				throw new LibraryServiceException("Plant is already linked to this book", HttpStatus.BAD_REQUEST);
+			}
+			else
+			{
+				bookPlantMapperRepository.deleteById(new BookPlantMapperId(book, plant));
+				
+				throw new LibraryServiceException("Plant does not exist", HttpStatus.NOT_FOUND);
+			}
+		}
+		else if(plantObject == null)
+		{
+			throw new LibraryServiceException("Plant does not exist", HttpStatus.NOT_FOUND);
 		}
 		
 		bookPlantMapperRepository.save(new BookPlantMapper(book, plant));
@@ -80,29 +110,23 @@ public class BookPlantMapperService
 	public void unlinkPlantFromBook(long book, long plant) throws LibraryServiceException
 	{
 		bookService.checkIfBookExists(book);
-		plantService.getPlant(plant);
+		
+		Plant plantObject = plantService.checkIfPlantExists(plant);
 		
 		Optional<BookPlantMapper> bookLinkedToPlant = bookPlantMapperRepository.findById(new BookPlantMapperId(book, plant));
 		
 		if(bookLinkedToPlant.isPresent() == false)
 		{
-			throw new LibraryServiceException("Plant is not linked to this book", HttpStatus.NOT_FOUND);
+			if(plantObject != null)
+			{
+				throw new LibraryServiceException("Plant is not linked to this book", HttpStatus.NOT_FOUND);
+			}
+			else
+			{
+				throw new LibraryServiceException("Plant does not exist", HttpStatus.NOT_FOUND);
+			}
 		}
 		
 		bookPlantMapperRepository.deleteById(new BookPlantMapperId(book, plant));
 	}
-	
-	public void unlinkPlantsFromBook(long book) throws LibraryServiceException
-	{
-		bookService.checkIfBookExists(book);
-		List<Plant> plants = getPlantsLinkedToBook(book);
-		
-		for(int i = 0; i < plants.size(); ++i)
-		{
-			bookPlantMapperRepository.deleteById(new BookPlantMapperId(book, plants.get(i).getId()));
-		}
-	}
-	
-	
-
 }
