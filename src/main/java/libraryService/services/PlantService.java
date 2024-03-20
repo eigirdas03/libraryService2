@@ -104,7 +104,11 @@ public class PlantService
 			
 		    HttpEntity<String> request = new HttpEntity<String>(requestJson.toString(), headers);
 			
-			restTemplate.postForEntity(resourceUrl, request, String.class);
+			ResponseEntity<String> response = restTemplate.postForEntity(resourceUrl, request, String.class);
+			
+			JSONObject responseJson = new JSONObject(response.getBody());
+			
+			plant.setId(responseJson.getLong("id"));
 		}
 		catch(RestClientException e)
 		{
