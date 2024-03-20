@@ -1,8 +1,11 @@
 package libraryService.models;
 
 
+import org.springframework.data.annotation.Id;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.media.Schema.AccessMode;
+import jakarta.persistence.Entity;
 
 public class Plant
 {

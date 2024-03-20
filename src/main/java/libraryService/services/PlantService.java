@@ -23,7 +23,7 @@ import libraryService.models.Plant;
 @Service
 public class PlantService
 {
-	final static String resourceUrl = "http://plant_service:5000/plants";
+	final static String resourceUrl = "http://localhost:5000/plants";
 	
 	public PlantService()
 	{

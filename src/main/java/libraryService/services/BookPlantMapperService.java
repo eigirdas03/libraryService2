@@ -18,13 +18,11 @@ public class BookPlantMapperService
 {
 	BookPlantMapperRepository bookPlantMapperRepository;
 	
-	BookService bookService;
 	PlantService plantService;
 
-	public BookPlantMapperService(BookPlantMapperRepository bookPlantMapperRepository, BookService bookService, PlantService plantService)
+	public BookPlantMapperService(BookPlantMapperRepository bookPlantMapperRepository, PlantService plantService)
 	{
 		this.bookPlantMapperRepository = bookPlantMapperRepository;
-		this.bookService = bookService;
 		this.plantService = plantService;
 		
 		bookPlantMapperRepository.save(new BookPlantMapper(1, 1));
@@ -32,9 +30,7 @@ public class BookPlantMapperService
 	}
 	
 	public List<Plant> getPlantsLinkedToBook(long book) throws LibraryServiceException
-	{
-		bookService.checkIfBookExists(book);
-		
+	{	
 		List<BookPlantMapper> mapperData = bookPlantMapperRepository.findAll();
 		
 		List<Long> plantIds = new ArrayList<>();
@@ -49,7 +45,7 @@ public class BookPlantMapperService
 		
 		if(plantIds.size() == 0)
 		{
-			throw new LibraryServiceException("This book does not have any plants linked to it", HttpStatus.NOT_FOUND);
+			return new ArrayList<>();
 		}
 		
 		List<Plant> plants = new ArrayList<>();
@@ -80,7 +76,7 @@ public class BookPlantMapperService
 	
 	public void linkPlantToBook(long book, long plant) throws LibraryServiceException
 	{
-		bookService.checkIfBookExists(book);
+		//bookService.checkIfBookExists(book);
 		
 		Plant plantObject = plantService.checkIfPlantExists(plant);
 		
@@ -109,7 +105,7 @@ public class BookPlantMapperService
 	
 	public void unlinkPlantFromBook(long book, long plant) throws LibraryServiceException
 	{
-		bookService.checkIfBookExists(book);
+		//bookService.checkIfBookExists(book);
 		
 		Plant plantObject = plantService.checkIfPlantExists(plant);
 		
@@ -128,5 +124,15 @@ public class BookPlantMapperService
 		}
 		
 		bookPlantMapperRepository.deleteById(new BookPlantMapperId(book, plant));
+	}
+	
+	List<BookPlantMapper> findAllFromRepository()
+	{
+		return bookPlantMapperRepository.findAll();
+	}
+	
+	void deleteFromRepository(BookPlantMapper mapperData)
+	{
+		bookPlantMapperRepository.delete(mapperData);
 	}
 }

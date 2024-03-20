@@ -3,7 +3,10 @@ package libraryService.models;
 
 
 import java.time.Year;
+import java.util.List;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.springframework.http.HttpStatus;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -33,6 +36,9 @@ public class Book
 	
 	@Column(name = "published")
 	int published;
+	
+	@JdbcTypeCode(SqlTypes.JSON)
+	List<Plant> plants;
 	
 	public Book()
 	{
@@ -102,4 +108,15 @@ public class Book
 		}
 		this.published = published;
 	}
+
+	public List<Plant> getPlants()
+	{
+		return plants;
+	}
+
+	public void setPlants(List<Plant> plants)
+	{
+		this.plants = plants;
+	}
+	
 }

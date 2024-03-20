@@ -12,7 +12,6 @@ import libraryService.models.Book;
 import libraryService.models.BookLibraryMapper;
 import libraryService.models.BookPlantMapper;
 import libraryService.repositories.BookLibraryMapperRepository;
-import libraryService.repositories.BookPlantMapperRepository;
 import libraryService.repositories.BookRepository;
 
 @Service
@@ -20,14 +19,15 @@ public class BookService
 {
 	BookRepository bookRepository;
 	BookLibraryMapperRepository bookLibraryMapperRepository;
-	BookPlantMapperRepository bookPlantMapperRepository;
+	BookPlantMapperService bookPlantMapperService;
 	
 	public BookService(BookRepository bookRepository, BookLibraryMapperRepository bookLibraryMapperRepository, 
-			BookPlantMapperRepository bookPlantMapperRepository) throws LibraryServiceException
+			BookPlantMapperService bookPlantMapperService) throws LibraryServiceException
 	{
 		this.bookRepository = bookRepository;
 		this.bookLibraryMapperRepository = bookLibraryMapperRepository;
-		this.bookPlantMapperRepository = bookPlantMapperRepository;
+		
+		this.bookPlantMapperService = bookPlantMapperService;
 		
         bookRepository.save(new Book("name1 surname1", "title1", 2000));
         bookRepository.save(new Book("name2 surname2", "title2", 2001));
@@ -64,6 +64,12 @@ public class BookService
 			throw new LibraryServiceException("No books exist", HttpStatus.NOT_FOUND);
 		}
 		
+		for(int i = 0; i < books.size(); ++i)
+		{
+			Book book = books.get(i);
+			book.setPlants(bookPlantMapperService.getPlantsLinkedToBook(book.getId()));
+		}
+		
 		return books;
 	}
 
@@ -72,6 +78,8 @@ public class BookService
 		Optional<Book> book = bookRepository.findById(id);
 		
 		checkIfBookExists(book);
+		
+		book.get().setPlants(bookPlantMapperService.getPlantsLinkedToBook(id));
 		
 		return book.get();
 	}
@@ -118,7 +126,7 @@ public class BookService
 			}
 		}
 		
-		List<BookPlantMapper> bookPlantMapperData = bookPlantMapperRepository.findAll();
+		List<BookPlantMapper> bookPlantMapperData = bookPlantMapperService.findAllFromRepository();
 		
 		for(int i = 0; i < bookPlantMapperData.size(); ++i)
 		{
@@ -126,7 +134,7 @@ public class BookService
 			
 			if(mapperData.getBook() == id)
 			{
-				bookPlantMapperRepository.delete(mapperData);
+				bookPlantMapperService.deleteFromRepository(mapperData);
 			}
 		}
 	}
