@@ -1,32 +1,36 @@
 package libraryService.services;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-
+import org.springframework.transaction.annotation.Transactional;
 
 import libraryService.exceptions.LibraryServiceException;
 import libraryService.models.Book;
-import libraryService.models.BookLibraryMapper;
-import libraryService.models.BookPlantMapper;
-import libraryService.repositories.BookLibraryMapperRepository;
+import libraryService.models.Plant;
 import libraryService.repositories.BookRepository;
 
 @Service
 public class BookService
 {
 	BookRepository bookRepository;
-	BookLibraryMapperRepository bookLibraryMapperRepository;
+	
+	BookLibraryMapperService bookLibraryMapperService;
+	
+	PlantService plantService;
 	BookPlantMapperService bookPlantMapperService;
 	
-	public BookService(BookRepository bookRepository, BookLibraryMapperRepository bookLibraryMapperRepository, 
-			BookPlantMapperService bookPlantMapperService) throws LibraryServiceException
+	public BookService(BookRepository bookRepository, BookLibraryMapperService bookLibraryMapperService, 
+			PlantService plantService, BookPlantMapperService bookPlantMapperService) throws LibraryServiceException
 	{
 		this.bookRepository = bookRepository;
-		this.bookLibraryMapperRepository = bookLibraryMapperRepository;
 		
+		this.bookLibraryMapperService = bookLibraryMapperService;
+		
+		this.plantService = plantService;
 		this.bookPlantMapperService = bookPlantMapperService;
 		
         bookRepository.save(new Book("name1 surname1", "title1", 2000));
@@ -44,7 +48,21 @@ public class BookService
 	
 	public void checkIfBookExists(long id) throws LibraryServiceException
 	{
-		checkIfBookExists(bookRepository.findById(id));
+		if(bookRepository.findById(id).isPresent() == false)
+		{
+			throw new LibraryServiceException("Book does not exist", HttpStatus.NOT_FOUND);
+		}
+	}
+	
+	public void checkIfBooksExist(List<Long> books) throws LibraryServiceException
+	{
+		for(int i = 0; i < books.size(); ++i)
+		{
+			if(bookRepository.findById(books.get(i)).isPresent() == false)
+			{
+				throw new LibraryServiceException("Book with id " + books.get(i) + " does not exist", HttpStatus.NOT_FOUND);
+			}
+		}
 	}
 	
 	public void checkIfBookDoesNotExist(long id) throws LibraryServiceException
@@ -67,7 +85,24 @@ public class BookService
 		for(int i = 0; i < books.size(); ++i)
 		{
 			Book book = books.get(i);
-			book.setPlants(bookPlantMapperService.getPlantsLinkedToBook(book.getId()));
+			List<Long> plantsIds = bookPlantMapperService.getPlantsIdsLinkedToBook(book.getId());
+			List<Plant> plants = new ArrayList<>();
+			
+			for(int j = 0; j < plantsIds.size(); ++j)
+			{
+				Plant plant = plantService.getPlant(plantsIds.get(j));
+				
+				if(plant != null)
+				{
+					plants.add(plant);
+				}
+				else
+				{
+					plants.add(new Plant(plantsIds.get(j), null, null));
+				}
+			}
+			
+			book.setPlants(plants);
 		}
 		
 		return books;
@@ -79,17 +114,51 @@ public class BookService
 		
 		checkIfBookExists(book);
 		
-		book.get().setPlants(bookPlantMapperService.getPlantsLinkedToBook(id));
+		List<Long> plantsIds = bookPlantMapperService.getPlantsIdsLinkedToBook(book.get().getId());
+		List<Plant> plants = new ArrayList<>();
+		
+		for(int j = 0; j < plantsIds.size(); ++j)
+		{
+			Plant plant = plantService.getPlant(plantsIds.get(j));
+			
+			if(plant != null)
+			{
+				plants.add(plant);
+			}
+			else
+			{
+				plants.add(new Plant(plantsIds.get(j), null, null));
+			}
+		}
+		
+		book.get().setPlants(plants);
 		
 		return book.get();
 	}
 	
+	@Transactional(rollbackFor = LibraryServiceException.class)
 	public Book addBook(Book book) throws LibraryServiceException
 	{
 		Book newBook = bookRepository.save(new Book(book));
+		
+		long bookId = newBook.getId();
+		
+		List<Plant> plants = book.getPlants();
+		
+		for(int i = 0; i < plants.size(); ++i)
+		{
+			Plant plant = plants.get(i);
+			plant = plantService.addPlant(plant);
+			
+			bookPlantMapperService.linkPlantToBook(bookId, plant.getId());
+		}
+		
+		newBook.setPlants(plants);
+		
 		return newBook;
 	}
 	
+	@Transactional(rollbackFor = LibraryServiceException.class)
 	public Book updateBook(long id, Book newBookData) throws LibraryServiceException
 	{
 		Optional<Book> book = bookRepository.findById(id);
@@ -103,6 +172,28 @@ public class BookService
 		
 		Book updatedBook = bookRepository.save(bookData);
 		
+		bookPlantMapperService.deleteByBookFromRepository(id);
+		
+		List<Plant> plants = newBookData.getPlants();
+		
+		for(int i = 0; i < plants.size(); ++i)
+		{
+			Plant plant = plants.get(i);
+			
+			if(plantService.getPlant(plant.getId()) != null)
+			{
+				plantService.updatePlant(plant);
+			}
+			else
+			{
+				plant = plantService.addPlant(plant);
+			}
+			
+			bookPlantMapperService.linkPlantToBook(id, plant.getId());
+		}
+		
+		updatedBook.setPlants(plants);
+		
 		return updatedBook;
 	}
 	
@@ -114,28 +205,14 @@ public class BookService
 		
 		bookRepository.deleteById(id);
 		
-		List<BookLibraryMapper> bookLibraryMapperData = bookLibraryMapperRepository.findAll();
+		bookLibraryMapperService.deleteByBookFromRepository(id);
 		
-		for(int i = 0; i < bookLibraryMapperData.size(); ++i)
+		List<Long> plantIds = bookPlantMapperService.getPlantsIdsLinkedToBook(id);
+		bookPlantMapperService.deleteByBookFromRepository(id);
+		
+		for(int i = 0; i < plantIds.size(); ++i)
 		{
-			BookLibraryMapper mapperData = bookLibraryMapperData.get(i);
-			
-			if(mapperData.getBook() == id)
-			{
-				bookLibraryMapperRepository.delete(mapperData);
-			}
-		}
-		
-		List<BookPlantMapper> bookPlantMapperData = bookPlantMapperService.findAllFromRepository();
-		
-		for(int i = 0; i < bookPlantMapperData.size(); ++i)
-		{
-			BookPlantMapper mapperData = bookPlantMapperData.get(i);
-			
-			if(mapperData.getBook() == id)
-			{
-				bookPlantMapperService.deleteFromRepository(mapperData);
-			}
+			plantService.deletePlant(plantIds.get(i));
 		}
 	}
 }

@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import libraryService.exceptions.LibraryServiceException;
 import libraryService.models.Library;
+import libraryService.requests.PostAndPutLibraryRequest;
+import libraryService.requests.PutBooksInLibraryRequest;
 import libraryService.services.LibraryService;
 
 @RestController
@@ -40,21 +42,34 @@ public class LibraryController
 	}
 	
 	@PostMapping("/libraries")
-	public ResponseEntity<Library> addLibrary(@RequestBody Library library) throws LibraryServiceException
+	public ResponseEntity<Library> addLibrary(@RequestBody PostAndPutLibraryRequest request) throws LibraryServiceException
 	{
-		return new ResponseEntity<>(libraryService.addLibrary(library), HttpStatus.CREATED);
+		return new ResponseEntity<>(libraryService.addLibrary(request), HttpStatus.CREATED);
 	}
 	
 	@PutMapping("/libraries/{id}")
-	public ResponseEntity<Library> updateLibrary(@PathVariable long id,@RequestBody Library newLibraryData) throws LibraryServiceException
+	public ResponseEntity<Library> updateLibrary(@PathVariable long id, @RequestBody PostAndPutLibraryRequest request) throws LibraryServiceException
 	{
-		return new ResponseEntity<>(libraryService.updateLibrary(id, newLibraryData), HttpStatus.OK);
+		return new ResponseEntity<>(libraryService.updateLibrary(id, request), HttpStatus.OK);
+	}
+	
+	@PutMapping("/libraries/{id}/books")
+	public ResponseEntity<Library> updateLibraryBooks(@PathVariable long id, @RequestBody PutBooksInLibraryRequest request) throws LibraryServiceException
+	{
+		return new ResponseEntity<>(libraryService.updateLibraryBooks(id, request), HttpStatus.OK);
 	}
 	
 	@DeleteMapping("/libraries/{id}")
 	public ResponseEntity<HttpStatus> deleteLibrary(@PathVariable long id) throws LibraryServiceException
 	{
 		libraryService.deleteLibrary(id);
+		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+	}
+	
+	@DeleteMapping("/libraries/{id}/books/{bookId}")
+	public ResponseEntity<HttpStatus> deleteLibraryBooks(@PathVariable("id") long library, @PathVariable("bookId") long  book) throws LibraryServiceException
+	{
+		libraryService.deleteLibraryBook(library, book);
 		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 	}
 

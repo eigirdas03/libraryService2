@@ -2,7 +2,10 @@ package libraryService.models;
 
 
 import java.time.Year;
+import java.util.List;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.springframework.http.HttpStatus;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -32,6 +35,9 @@ public class Library
 	
 	@Column(name = "opened")
 	int opened;
+	
+	@JdbcTypeCode(SqlTypes.JSON)
+	List<Book> books;
 	
 	public Library()
 	{
@@ -100,5 +106,15 @@ public class Library
 			throw new LibraryServiceException("invalid year value", HttpStatus.BAD_REQUEST);
 		}
 		this.opened = opened;
+	}
+
+	public List<Book> getBooks()
+	{
+		return books;
+	}
+
+	public void setBooks(List<Book> books)
+	{
+		this.books = books;
 	}
 }

@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 
 
 import libraryService.exceptions.LibraryServiceException;
-import libraryService.models.Book;
 import libraryService.models.BookLibraryMapper;
 import libraryService.models.BookLibraryMapperId;
 import libraryService.repositories.BookLibraryMapperRepository;
@@ -19,83 +18,98 @@ public class BookLibraryMapperService
 {
 	BookLibraryMapperRepository bookLibraryMapperRepository;
 	
-	LibraryService libraryService;
-	BookService bookService;
-	
-	public BookLibraryMapperService(LibraryService libraryService, BookService bookService,
-			BookLibraryMapperRepository bookLibraryMapperRepository)
+	public BookLibraryMapperService(BookLibraryMapperRepository bookLibraryMapperRepository)
 	{
 		this.bookLibraryMapperRepository = bookLibraryMapperRepository;
-		this.libraryService = libraryService;
-		this.bookService = bookService;
 		
         bookLibraryMapperRepository.save(new BookLibraryMapper(1, 1));
         bookLibraryMapperRepository.save(new BookLibraryMapper(1, 2));
 	}
 	
-	public List<Book> getAllLibraryBooks(long libraryId) throws LibraryServiceException
+	public List<BookLibraryMapper> getAllMappings()
 	{
-		libraryService.checkIfLibrarykExists(libraryId);
+		return bookLibraryMapperRepository.findAll();
+	}
+	
+	public List<Long> getAllLibraryBooksIds(long libraryId) throws LibraryServiceException
+	{
+		List<BookLibraryMapper> mapperData = bookLibraryMapperRepository.findByLibrary(libraryId);
 		
-		List<BookLibraryMapper> mapperData = bookLibraryMapperRepository.findAll();
-		
-		List <Book> libraryBooks = new ArrayList<>();
+		List <Long> libraryBooks = new ArrayList<>();
 		
 		for(int i = 0; i < mapperData.size(); ++i)
 		{
-			if(mapperData.get(i).getLibrary() == libraryId)
-			{
-				long bookId = mapperData.get(i).getBook();
-				libraryBooks.add(bookService.getBookById(bookId));
-			}
+			libraryBooks.add(mapperData.get(i).getBook());
 		}
 		
 		if(libraryBooks.size() == 0)
 		{
-			throw new LibraryServiceException("Library does not have any books", HttpStatus.NOT_FOUND);
+			return new ArrayList<>();
 		}
 		
 		return libraryBooks;
 	}
 	
-	
-	public void addBookToLibrary(long library, long  book) throws LibraryServiceException
+	public void checkIfBooksAreNotInOtherLibraries(List<Long> books) throws LibraryServiceException
 	{
-		libraryService.checkIfLibrarykExists(library);
-		bookService.checkIfBookExists(book);
-		
-		if(bookLibraryMapperRepository.findById(new BookLibraryMapperId(library, book)).isPresent())
+		for(int i = 0; i < books.size(); ++i)
 		{
-			throw new LibraryServiceException("Book is already in this library", HttpStatus.BAD_REQUEST);
-		}
-		
-		List<BookLibraryMapper> allMapperData = bookLibraryMapperRepository.findAll();
-		
-		for(int i = 0; i < allMapperData.size(); ++i)
-		{
-			BookLibraryMapper mapperData = allMapperData.get(i);
+			List<BookLibraryMapper> allMapperData = bookLibraryMapperRepository.findByBook(books.get(i));
 			
-			if(mapperData.getBook() == book)
+			if(allMapperData.size() != 0)
 			{
-				throw new LibraryServiceException("Book is in another library", HttpStatus.BAD_REQUEST);
+				throw new LibraryServiceException("Book with id " + books.get(i) + " is in another library", HttpStatus.BAD_REQUEST);
 			}
 		}
-		
+	}
+	
+	public void checkIfBooksAreNotInOtherLibraries(long id, List<Long> books) throws LibraryServiceException
+	{
+		for(int i = 0; i < books.size(); ++i)
+		{
+			List<BookLibraryMapper> allMapperData = bookLibraryMapperRepository.findByBook(books.get(i));
+			
+			if(allMapperData.size() == 1)
+			{
+				if(allMapperData.get(0).getLibrary() != id)
+				{
+					throw new LibraryServiceException("Book with id " + books.get(i) + " is in another library", HttpStatus.BAD_REQUEST);
+				}
+			}
+			else if(allMapperData.size() != 0)
+			{
+				throw new LibraryServiceException("Book with id " + books.get(i) + " is in another library", HttpStatus.BAD_REQUEST);
+			}
+		}
+	}
+	
+	public void addBookToLibrary(long library, long book) throws LibraryServiceException
+	{
 		bookLibraryMapperRepository.save(new BookLibraryMapper(library, book));
 	}
 	
-	public void removeBookFromLibrary(long library, long  book) throws LibraryServiceException
+	public void checkIfBookIsInThisLibrary(long library, long book) throws LibraryServiceException
 	{
-		libraryService.checkIfLibrarykExists(library);
-		bookService.checkIfBookExists(book);
-		
 		Optional<BookLibraryMapper> bookInLibrary = bookLibraryMapperRepository.findById(new BookLibraryMapperId(library, book));
 		
 		if(bookInLibrary.isPresent() == false)
 		{
 			throw new LibraryServiceException("Book is not in this library", HttpStatus.NOT_FOUND);
 		}
-		
+	}
+	
+	public void removeBookFromLibrary(long library, long book)
+	{
 		bookLibraryMapperRepository.deleteById(new BookLibraryMapperId(library, book));
+	}
+	
+	public void deleteByLibraryFromRepository(long library)
+	{
+		bookLibraryMapperRepository.deleteByLibrary(library);
+	}
+	
+	public void deleteByBookFromRepository(long book)
+	{
+		bookLibraryMapperRepository.deleteByBook(book);
 	}
 }

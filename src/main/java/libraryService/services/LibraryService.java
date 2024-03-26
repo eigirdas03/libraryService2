@@ -1,5 +1,6 @@
 package libraryService.services;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -8,22 +9,27 @@ import org.springframework.stereotype.Service;
 
 
 import libraryService.exceptions.LibraryServiceException;
-import libraryService.models.BookLibraryMapper;
+import libraryService.models.Book;
 import libraryService.models.Library;
-import libraryService.repositories.BookLibraryMapperRepository;
 import libraryService.repositories.LibraryRepository;
+import libraryService.requests.PostAndPutLibraryRequest;
+import libraryService.requests.PutBooksInLibraryRequest;
 
 @Service
 public class LibraryService
 {
 	LibraryRepository libraryRepository;
 	
-	BookLibraryMapperRepository bookLibraryMapperRepository;
+	BookService bookService;
+	BookLibraryMapperService bookLibraryMapperService;
 
-	public LibraryService(LibraryRepository libraryRepository, BookLibraryMapperRepository bookLibraryMapperRepository) throws LibraryServiceException
+	public LibraryService(LibraryRepository libraryRepository, BookService bookService, 
+			BookLibraryMapperService bookLibraryMapperService) throws LibraryServiceException
 	{
 		this.libraryRepository = libraryRepository;
-		this.bookLibraryMapperRepository = bookLibraryMapperRepository;
+		
+		this.bookService = bookService;
+		this.bookLibraryMapperService = bookLibraryMapperService;
 		
         libraryRepository.save(new Library("library1", "address 1-1", 1990));
         libraryRepository.save(new Library("library2", "address 1-2", 1991));
@@ -60,6 +66,22 @@ public class LibraryService
 			throw new LibraryServiceException("No libraries exist", HttpStatus.NOT_FOUND);
 		}
 		
+		List<Long> booksIds = null;
+		ArrayList<Book> books = null;
+		
+		for(int i = 0; i < libraries.size(); ++i)
+		{
+			booksIds = bookLibraryMapperService.getAllLibraryBooksIds(libraries.get(i).getId());
+			books = new ArrayList<>();
+			
+			for(int j = 0; j < booksIds.size(); ++j)
+			{
+				books.add(bookService.getBookById(booksIds.get(j)));
+			}
+			
+			libraries.get(i).setBooks(books);
+		}
+		
 		return libraries;
 	}
 	
@@ -69,30 +91,95 @@ public class LibraryService
 		Optional<Library> library = libraryRepository.findById(id);
 		checkIfLibrarykExists(library);
 		
+		List<Long> booksIds = bookLibraryMapperService.getAllLibraryBooksIds(id);
+		ArrayList<Book> books = new ArrayList<>();
+		
+		for(int i = 0; i < booksIds.size(); ++i)
+		{
+			books.add(bookService.getBookById(booksIds.get(i)));
+		}
+		
+		library.get().setBooks(books);
+		
 		return library.get();
 	}
 	
-	public Library addLibrary(Library library) throws LibraryServiceException
+	public Library addLibrary(PostAndPutLibraryRequest request) throws LibraryServiceException
 	{
-		Library newLibrary = libraryRepository.save(new Library(library));
-		return newLibrary;
+		List<Long> books = request.getBooks();
+		
+		bookService.checkIfBooksExist(books);
+		bookLibraryMapperService.checkIfBooksAreNotInOtherLibraries(books);
+		
+		Library library = new Library(request.getName(), request.getAddress(), request.getOpened());
+		
+		Library newLibrary = libraryRepository.save(library);
+		
+		for(int i = 0; i < books.size(); ++i)
+		{
+			bookLibraryMapperService.addBookToLibrary(newLibrary.getId(), books.get(i));
+		}
+		
+		return getLibraryById(newLibrary.getId());
 	}
 	
 
-	public Library updateLibrary(long id, Library newLibraryData) throws LibraryServiceException
+	public Library updateLibrary(long id, PostAndPutLibraryRequest request) throws LibraryServiceException
 	{
 		Optional<Library> library = libraryRepository.findById(id);
 		checkIfLibrarykExists(library);
 		
+		List<Long> books = request.getBooks();
+		
+		if(books.size() == 0)
+		{
+			throw new LibraryServiceException("Books array in request body cannot be empty", HttpStatus.BAD_REQUEST);
+		}
+		
+		bookService.checkIfBooksExist(books);
+		bookLibraryMapperService.checkIfBooksAreNotInOtherLibraries(id, books);
+		
 		Library libraryData = library.get();
 		
-		libraryData.setName(newLibraryData.getName());
-		libraryData.setAddress(newLibraryData.getAddress());
-		libraryData.setOpened(newLibraryData.getOpened());
+		libraryData.setName(request.getName());
+		libraryData.setAddress(request.getAddress());
+		libraryData.setOpened(request.getOpened());
 		
-		Library updatedLibrary = libraryRepository.save(libraryData);
+		libraryRepository.save(libraryData);
 		
-		return updatedLibrary;
+		bookLibraryMapperService.deleteByLibraryFromRepository(id);
+		
+		for(int i = 0; i < books.size(); ++i)
+		{
+			bookLibraryMapperService.addBookToLibrary(id, books.get(i));
+		}
+		
+		return getLibraryById(id);
+	}
+	
+	public Library updateLibraryBooks(long id, PutBooksInLibraryRequest request) throws LibraryServiceException
+	{
+		Optional<Library> library = libraryRepository.findById(id);
+		checkIfLibrarykExists(library);
+		
+		List<Long> books = request.getBooks();
+		
+		if(books.size() == 0)
+		{
+			throw new LibraryServiceException("Books array in request body cannot be empty", HttpStatus.BAD_REQUEST);
+		}
+		
+		bookService.checkIfBooksExist(books);
+		bookLibraryMapperService.checkIfBooksAreNotInOtherLibraries(id, books);
+		
+		bookLibraryMapperService.deleteByLibraryFromRepository(id);
+		
+		for(int i = 0; i < books.size(); ++i)
+		{
+			bookLibraryMapperService.addBookToLibrary(id, books.get(i));
+		}
+		
+		return getLibraryById(id);
 	}
 	
 	public void deleteLibrary(long id) throws LibraryServiceException
@@ -102,18 +189,20 @@ public class LibraryService
 		checkIfLibrarykExists(library);
 		
 		libraryRepository.deleteById(id);
-			
-		List<BookLibraryMapper> allMapperData = bookLibraryMapperRepository.findAll();
 		
-		for(int i = 0; i < allMapperData.size(); ++i)
-		{
-			BookLibraryMapper mapperData = allMapperData.get(i);
-			
-			if(mapperData.getLibrary() == id)
-			{
-				bookLibraryMapperRepository.delete(mapperData);
-			}
-		}
+		bookLibraryMapperService.deleteByLibraryFromRepository(id);	
+	}
+	
+	public void deleteLibraryBook(long libraryId, long book) throws LibraryServiceException
+	{
+		Optional<Library> library = libraryRepository.findById(libraryId);
+		
+		checkIfLibrarykExists(library);
+		bookService.checkIfBookExists(book);
+		
+		bookLibraryMapperService.checkIfBookIsInThisLibrary(libraryId, book);
+		
+		bookLibraryMapperService.removeBookFromLibrary(libraryId, book);
 	}
 
 }
